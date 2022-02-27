@@ -6,6 +6,7 @@ window.addEventListener("DOMContentLoaded", () => {
     createBoard(board);
     // Open the WebSocket connection and register event handlers.
     const websocket = new WebSocket("ws://localhost:8001/");
+    initGame(websocket)
     receiveMoves(board, websocket)
     sendMoves(board, websocket);
 });
@@ -46,8 +47,31 @@ function sendMoves(board, websocket) {
         case "error":
           showMessage(event.message);
           break;
+        case "init":
+          // Create link for inviting second player
+          document.querySelector(".join").href = "?join=" + event.join;
+          document.querySelector(".watch").href = "?watch=" + event.watch;
+          break;
         default:
           throw new Error(`Unsupported event type: ${event.type}.`);
       }
+    });
+  }
+
+  function initGame(websocket) {
+    websocket.addEventListener("open", () => {
+      // Send an "init" event according to who is connecting.
+      const params = new URLSearchParams(window.location.search);
+      let event = { type: "init" };
+      if (params.has("join")) {
+        // Second player joins an existing game.
+        event.join = params.get("join");
+      } else if (params.has("watch")) {
+        // Watching player joins an existing game.
+        event.watch = params.get("watch")
+      } else {
+        // First player starts a new game.
+      }
+      websocket.send(JSON.stringify(event));
     });
   }
